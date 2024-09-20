@@ -1,6 +1,9 @@
+module Nfa2dfa where
+  
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
+ 
 type Symbol = Char 
 type State = Int
 type NfaTransition = Map.Map (State, Maybe Symbol) (Set.Set State) 
@@ -79,39 +82,6 @@ constructDFA nfa (q:qs) (DFA st symbols statesSet rules) =
 
     in constructDFA nfa qs' dfa' 
 
-
--- TEST --
-test = constructDFA exampleNFA [epsClosure exampleNFA (Set.fromList [startState exampleNFA])] initDFA
-
-initDFA = DFA {
-    startStates = epsClosure exampleNFA (Set.fromList [startState exampleNFA]),
-    alphabt = alphabet exampleNFA,
-    collectionSet = Set.singleton (epsClosure exampleNFA (Set.fromList [startState exampleNFA])),
-    transitionRules = Map.empty
-    }
-
-exampleNFA :: NFA 
-exampleNFA = NFA {
-    startState = 0,
-    stateSet = Set.fromList [0..9],
-    acceptSet = Set.fromList [9],
-    alphabet = Set.fromList ['a', 'b','c'],
-    transition = Map.fromList [
-        ((0, Just 'a'), Set.fromList [1]),
-        ((1, Nothing),  Set.fromList [2]),
-        ((2, Nothing),  Set.fromList [3, 9]),
-        ((3, Nothing),  Set.fromList [4, 6]),
-        ((4, Just 'b'), Set.fromList [5]),
-        ((5, Nothing),  Set.fromList [8]),
-        ((6, Just 'c'), Set.fromList [7]),
-        ((7, Nothing),  Set.fromList [8]),
-        ((8, Nothing),  Set.fromList [3, 9])
-    ]
-} 
-
-exampleDFA = nfa2dfa exampleNFA 
-
--- refined DFA
 data DFAr = DFAr {                  -- simplified DFA
     startNode :: State,
     nodeSet   :: Set.Set State,
@@ -120,6 +90,7 @@ data DFAr = DFAr {                  -- simplified DFA
     rules :: DfarTransition
 } deriving Show 
 
+-- refined DFA
 dfa2dfar :: NFA -> DFA -> DFAr
 dfa2dfar nfa dfa = 
     let 
@@ -154,5 +125,3 @@ unwrappedLookup key map = case Map.lookup key map of
     Just x  -> x   
     Nothing -> error "Key not found!"  
 
-
-exampleDFAr = dfa2dfar exampleNFA exampleDFA
