@@ -1,0 +1,37 @@
+exampleDFA:
+DFA {
+    startStates = fromList [0], 
+    alphabt = fromList "abc", 
+    collectionSet = fromList [
+        fromList [0],
+        fromList [1,2,3,4,6,9],
+        fromList [3,4,5,6,8,9],
+        fromList [3,4,6,7,8,9]
+    ], 
+    transitionRules = fromList [
+        ((fromList [0],Just 'a'),fromList [1,2,3,4,6,9]),
+        ((fromList [1,2,3,4,6,9],Just 'b'),fromList [3,4,5,6,8,9]),
+        ((fromList [1,2,3,4,6,9],Just 'c'),fromList [3,4,6,7,8,9]),
+        ((fromList [3,4,5,6,8,9],Just 'b'),fromList [3,4,5,6,8,9]),
+        ((fromList [3,4,5,6,8,9],Just 'c'),fromList [3,4,6,7,8,9]),
+        ((fromList [3,4,6,7,8,9],Just 'b'),fromList [3,4,5,6,8,9]),
+        ((fromList [3,4,6,7,8,9],Just 'c'),fromList [3,4,6,7,8,9])
+    ]
+}
+
+exampleDFAr:
+DFAr {
+    startNode = 0, 
+    nodeSet = fromList [0,1,2,3], 
+    acceptNodes = fromList [1,2,3], 
+    alphabat = fromList "abc", 
+    rules = fromList [
+        ((0,Just 'a'),1),
+        ((1,Just 'b'),2),
+        ((1,Just 'c'),3),
+        ((2,Just 'b'),2),
+        ((2,Just 'c'),3),
+        ((3,Just 'b'),2),
+        ((3,Just 'c'),3)
+    ]
+}
