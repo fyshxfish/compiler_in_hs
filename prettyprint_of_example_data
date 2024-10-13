@@ -1,3 +1,22 @@
+exampleNFA :: NFA 
+exampleNFA = NFA {
+    startState = 0,
+    stateSet = Set.fromList [0..9],
+    acceptSet = Set.fromList [9],
+    alphabet = Set.fromList ['a','b','c'],
+    transition = Map.fromList [
+        ((0, Just 'a'), Set.fromList [1]),
+        ((1, Nothing),  Set.fromList [2]),
+        ((2, Nothing),  Set.fromList [3, 9]),
+        ((3, Nothing),  Set.fromList [4, 6]),
+        ((4, Just 'b'), Set.fromList [5]),
+        ((5, Nothing),  Set.fromList [8]),
+        ((6, Just 'c'), Set.fromList [7]),
+        ((7, Nothing),  Set.fromList [8]),
+        ((8, Nothing),  Set.fromList [3, 9])
+    ]
+} 
+
 exampleDFA:
 DFA {
     startStates = fromList [0], 
