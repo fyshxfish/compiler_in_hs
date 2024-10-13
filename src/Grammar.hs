@@ -37,61 +37,161 @@ nullable' True rls s =
 allInSet :: Ord a => Set.Set a -> [a] -> Bool 
 allInSet s = all (`Set.member` s)   
 
+type VarMap = Map.Map (Symbol Char) (Set.Set (Symbol Char))
 
-firstMap :: Grammar -> Map.Map (Symbol Char) (Set.Set (Symbol Char))  
-firstMap = undefined
+firstMap :: Grammar -> VarMap 
+firstMap grammar = 
+    let initMap = Map.fromList $ [(t, Set.empty) | t <- gVariables grammar]
+    in firstMap' True grammar initMap  
 
-firstOfV :: Symbol Char -> Grammar -> Set.Set (Symbol Char)     -- FIRST of Variable V
-firstOfV v grammar = 
+firstMap' :: Bool -> Grammar -> VarMap -> VarMap
+firstMap' False _ m = m
+firstMap' True grammar m = 
     let 
-        nullVset = nullable grammar 
-        rls = rulesFor v grammar 
+        nullVSet = nullable grammar     -- nullable set of grammar
+        rls = gRules grammar
 
-        traverseRules [] s = s 
-        traverseRules ((_, rhs):rs) s = undefined
+        traverseRules [] accm = accm
+        traverseRules ((v, rhs): rs) accm = 
+            let curSet = unwrappedLookup v accm
+                apdSet = traverseRhs rhs curSet accm
+                accm' = Map.insert v apdSet accm
+            in traverseRules rs accm'
 
-        traverseRhs [] = undefined
-        traverseRhs (V v: syms) = undefined   
-        traverseRhs (T t: syms) = undefined
+        traverseRhs [] s _ = s
+        traverseRhs ((T t): _) s _ = Set.union s (Set.singleton (T t))  
+        traverseRhs ((V v): syms) s curM =
+            let vFirstSet = unwrappedLookup (V v) curM
+                s' = Set.union s vFirstSet
+            in if Set.member (V v) nullVSet
+               then traverseRhs syms s' curM  
+               else s'
+        
+        m' = traverseRules rls m
+        go = any (\v -> Set.size (unwrappedLookup v m') /= Set.size (unwrappedLookup v m)) (gVariables grammar)
+        
+    in firstMap' go grammar m'
 
-    in undefined
+
+followMap :: Grammar -> VarMap 
+followMap grammar = 
+    let initMap = Map.fromList $ [(t, Set.empty) | t <- gVariables grammar]
+    in followMap' True grammar initMap  
+
+followMap' :: Bool -> Grammar -> VarMap -> VarMap
+followMap' False _ m = m 
+followMap' True grammar m = 
+    let 
+        nullVSet = nullable grammar     -- nullable set of grammar
+        rls = gRules grammar
+        firstSet = firstMap grammar 
+
+        traverseRules [] accm = accm
+        traverseRules ((v, rhs): rs) accm = 
+            let curFollowTerms = unwrappedLookup v accm
+                accm' = traverseRhs (reverse rhs) curFollowTerms accm
+            in  traverseRules rs accm'
+
+        traverseRhs [] _ followM = followM 
+        traverseRhs ((T t): syms) _ followM = traverseRhs syms (Set.singleton (T t)) followM 
+        traverseRhs ((V v): syms) curFollowTerms followM = 
+            let oldFollowSet = unwrappedLookup (V v) followM 
+                newFollowSet = Set.union curFollowTerms oldFollowSet 
+                followM' = Map.insert (V v) newFollowSet followM
+                curFollowTerms' = if Set.member (V v) nullVSet
+                                then Set.union curFollowTerms (unwrappedLookup (V v) firstSet)
+                                else unwrappedLookup (V v) firstSet
+            in traverseRhs syms curFollowTerms' followM' 
+        
+        m' = traverseRules rls m
+        go = any (\v -> Set.size (unwrappedLookup v m') /= Set.size (unwrappedLookup v m)) (gVariables grammar)
+        
+    in followMap' go grammar m'
+
+ 
+ruleFirstSet :: Rule -> Grammar -> Set.Set (Symbol Char)
+ruleFirstSet (lhsv, rhs) grammar = 
+    let  
+        nullSet = nullable grammar
+        firstSet = firstMap grammar 
+        followSet = followMap grammar
+
+        traverseRhs [] curSet = curSet  
+        traverseRhs ((T t):_) curSet = Set.union curSet (Set.singleton (T t))
+        traverseRhs ((V v):syms) curSet = 
+            let 
+                vfirst = unwrappedLookup (V v) firstSet 
+                newSet = Set.union vfirst curSet 
+            in 
+                if Set.member (V v) nullSet 
+                then traverseRhs syms newSet 
+                else newSet
+        
+        rFirstSet = traverseRhs rhs Set.empty
+        
+    in if allInSet nullSet rhs 
+       then Set.union rFirstSet (unwrappedLookup lhsv followSet)
+       else rFirstSet
+
+grammarRuleFirstSet :: Grammar ->  [(Rule, Set.Set (Symbol Char))]
+grammarRuleFirstSet grammar = 
+    let rules = gRules grammar 
+    in [(rule, ruleFirstSet rule grammar) | rule <- rules]
+        
+grammarRuleFirstSetId :: Grammar ->  [(Int, Rule,Set.Set (Symbol Char))]
+grammarRuleFirstSetId grammar = 
+    let rules = gRules grammar 
+        rulesIds = zip rules [0 ..]
+    in [(idx, rule, ruleFirstSet rule grammar) | (rule, idx) <- rulesIds]
+
+ll1table :: Grammar -> Map.Map (Symbol Char, Symbol Char) (Set.Set Int)
+ll1table grammar = 
+    let ruleFirstSetTup = grammarRuleFirstSetId grammar 
+        initMap = Map.fromList $ [((v,t), Set.empty) | v <- gVariables grammar, t <- gTerminals grammar]
+    in ll1table' ruleFirstSetTup initMap
 
 
+ll1table' :: [(Int, Rule, Set.Set (Symbol Char))] -> Map.Map (Symbol Char, Symbol Char) (Set.Set Int) -> Map.Map (Symbol Char, Symbol Char) (Set.Set Int)
+ll1table' [] m = m 
+ll1table' ((idx, (v, _), s):ts) m =
+    let 
+        traverseTerms [] curM = curM 
+        traverseTerms (term:terms) curM = 
+            let 
+                curSet = unwrappedLookup (v, term) curM
+                newSet = Set.insert idx curSet
+                newM = Map.insert (v, term) newSet curM  -- Add 'curM' as the third argument
+            in traverseTerms terms newM 
+        
+        m' = traverseTerms (Set.toList s) m
+    in ll1table' ts m'  -- Use 'm'' instead of 'newM'
 
 
+unwrappedLookup :: (Ord k, Show v) => k -> Map.Map k v -> v
+unwrappedLookup key mymap = case Map.lookup key mymap of
+    Just value  -> value   
+    Nothing -> error "Key not found!"  
 
--- dirty test in ghci: [TO BE REMOVED] --
 
--- g :: Grammar 
--- g = Grammar {
---     gTerminals = [T 's', T 't', T 'g',  T 'w', T 'e', T 'd'],
---     gVariables = [V 'S', V 'N', V 'V'],
---     gRules = [Rule (V 'S') [V 'N', V 'V', V 'N'], 
---              Rule (V 'N') [T 's'],
---              Rule (V 'N') [T 't'],
---              Rule (V 'N') [T 'w'],
---              Rule (V 'N') [T 'w'],
---              Rule (V 'V') [T 'e'],
---              Rule (V 'V') [T 'd']
---             ],
---     gStartVariable = V 'S'
--- }
+-- dirty test [TO BE REMOVED] --
 
-g :: Grammar
-g = Grammar {
-    gTerminals = [T 'c', T 'd'],
-    gVariables = [V 'Z', V 'Y', V 'X'],
-    gRules = [(V 'Z', [V 'X', V 'Y']), 
-              (V 'X', []),
-              (V 'X', [T 'd']),
-              (V 'Y', []),
-              (V 'Y', [T 'c'])
+g2 :: Grammar 
+g2 = Grammar {
+    gTerminals = [T 's', T 't', T 'g', T 'w', T 'e', T 'd'],
+    gVariables = [V 'S', V 'N', V 'V', V 'M'],
+    gRules = [
+              (V 'S', [V 'N', V 'V', V 'N']), 
+              (V 'N', [T 's']), 
+              (V 'N', [T 't']), 
+              (V 'N', [T 'g']), 
+              (V 'N', [T 'w', V 'M']), 
+              (V 'M', []), 
+              (V 'M', [V 'N']), 
+              (V 'V', [T 'e']), 
+              (V 'V', [T 'd'])
              ],
     gStartVariable = V 'S'
 }
 
-x :: Set.Set (Symbol Char)
-x = nullable g
-
-y :: [Rule]
-y = rulesFor (V 'X') g
+table :: Map.Map (Symbol Char, Symbol Char) (Set.Set Int)
+table = ll1table g2

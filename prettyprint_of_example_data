@@ -54,3 +54,37 @@ DFAr {
         ((3,Just 'c'),3)
     ]
 }
+
+
+[((V 'Z',[T 'd']),fromList [T 'd']),
+((V 'Z',[V 'X',V 'Y',V 'Z',V 'Z']),fromList [T 'a',T 'c',T 'd']),
+((V 'Y',[T 'c']),fromList [T 'c']),
+((V 'Y',[]),fromList [T 'a',T 'c',T 'd']),
+((V 'X',[V 'Y']),fromList [T 'a',T 'c',T 'd']),
+((V 'X',[T 'a']),fromList [T 'a'])]
+
+λ> table 
+fromList [((V 'M',T 'd'),fromList [5]),
+          ((V 'M',T 'e'),fromList [5]),
+          ((V 'M',T 'g'),fromList [6]),
+          ((V 'M',T 's'),fromList [6]),
+          ((V 'M',T 't'),fromList [6]),
+          ((V 'M',T 'w'),fromList [6]),
+          ((V 'N',T 'd'),fromList []),
+          ((V 'N',T 'e'),fromList []),
+          ((V 'N',T 'g'),fromList [3]),
+          ((V 'N',T 's'),fromList [1]),
+          ((V 'N',T 't'),fromList [2]),
+          ((V 'N',T 'w'),fromList [4]),
+          ((V 'S',T 'd'),fromList []),
+          ((V 'S',T 'e'),fromList []),
+          ((V 'S',T 'g'),fromList [0]),
+          ((V 'S',T 's'),fromList [0]),
+          ((V 'S',T 't'),fromList [0]),
+          ((V 'S',T 'w'),fromList [0]),
+          ((V 'V',T 'd'),fromList [8]),
+          ((V 'V',T 'e'),fromList [7]),
+          ((V 'V',T 'g'),fromList []),
+          ((V 'V',T 's'),fromList []),
+          ((V 'V',T 't'),fromList []),
+          ((V 'V',T 'w'),fromList [])]
